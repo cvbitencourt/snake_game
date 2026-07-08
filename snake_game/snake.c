@@ -2,14 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* ---------------------- Constantes fixas da tela ------------------ 
-#define LARGURA_TELA     800
-#define ALTURA_TELA      600
-#define TAMANHO_INICIAL   3
-#define PONTUACAO_VITORIA 20
-#define ARQUIVO_PLACAR   "placar.txt"
-
-/* Capacidades maximas (o pior caso e o nivel DIFICIL, com grade fina) */
 #define MAX_TAMANHO           5000   /* segmentos possiveis da cobra   */
 #define MAX_OBSTACULOS_CAP    30
 #define MAX_FRUTAS_RUINS_CAP  8
@@ -19,7 +11,6 @@
 #define DURACAO_FRUTA_RUIM    5.0f   /* segundos que cada fruta marrom fica na tela */
 #define DURACAO_COMIDA        8.0f   /* segundos ate a comida boa sumir e reaparecer em outro lugar */
 
-/* ---------------------- Tipos de dados --------------------------- */
 typedef enum { MENU, JOGANDO, GAME_OVER, VITORIA } EstadoJogo;
 typedef enum { CIMA, BAIXO, ESQUERDA, DIREITA } Direcao;
 typedef enum { FACIL, MEDIO, DIFICIL } Dificuldade;
@@ -37,7 +28,7 @@ typedef struct {
 typedef struct {
     Posicao pos;
     bool ativa;
-    float tempoAtiva;   /* ha quanto tempo esta na tela */
+    float tempoAtiva;  
 } FrutaRuim;
 
 typedef struct {
@@ -48,9 +39,8 @@ typedef struct {
     int numObstaculos;
 
     FrutaRuim frutasRuins[MAX_FRUTAS_RUINS_CAP];
-    float cronSpawnFrutaRuim;   /* contador ate tentar gerar a proxima fruta marrom */
-    float cronComida;           /* contador ate a comida boa sumir e trocar de lugar */
-
+    float cronSpawnFrutaRuim;   
+    float cronComida;          
     int pontuacao;
     int recorde;
     EstadoJogo estado;
@@ -58,7 +48,7 @@ typedef struct {
     float tempoAcumulado;
 } Jogo;
 
-/* Parametros que mudam de acordo com o nivel escolhido no menu */
+
 typedef struct {
     int tamanhoCelula;
     int numObstaculos;
@@ -68,17 +58,12 @@ typedef struct {
 } ConfigDificuldade;
 
 static const ConfigDificuldade CONFIGS_DIFICULDADE[3] = {
-    /* tamanhoCelula, numObstaculos, maxFrutasRuins, intervaloMovimento, nome */
     { 40,  0, 0, 0.17f, "FACIL"   },
     { 20,  8, 2, 0.13f, "MEDIO"   },
     { 10, 18, 5, 0.08f, "DIFICIL" },
 };
 
-/* ---------------------- Estado global de configuracao --------------
-   A grade (colunas/linhas), o tamanho da celula, a velocidade e a
-   quantidade de obstaculos/frutas ruins dependem do nivel escolhido,
-   entao viram variaveis (nao mais #define fixos) definidas quando o
-   jogador escolhe a dificuldade no menu. */
+
 static Dificuldade g_dificuldade       = MEDIO;
 static int         g_tamanhoCelula     = 20;
 static int         g_colunas           = LARGURA_TELA / 20;
@@ -87,14 +72,11 @@ static float       g_intervaloMovimento = 0.13f;
 static int         g_numObstaculosAlvo  = 8;
 static int         g_maxFrutasRuins     = 2;
 
-/* ---------------------- Texturas (PNG opcionais) -------------------
-   Se os arquivos nao existirem, o jogo continua funcionando normalmente
-   desenhando retangulos coloridos no lugar (ver DesenharEntidade). */
+
 static Texture2D texturaObstaculo = { 0 };
 static Texture2D texturaComida    = { 0 };
 static Texture2D texturaFrutaRuim = { 0 };
 
-/* ---------------------- Prototipos -------------------------------- */
 void InitGame(Jogo *jogo);
 void UpdateGame(Jogo *jogo);
 void DrawGame(Jogo *jogo);
@@ -115,23 +97,15 @@ static int  CarregarRecorde(void);
 static void SalvarPontuacao(int pontuacao, int recordeAtual);
 static void DesenharEntidade(Texture2D textura, Posicao pos, Color corFallback);
 
-/* ===================================================================
-   main
-   =================================================================== */
+
 int main(void) {
     InitWindow(LARGURA_TELA, ALTURA_TELA, "Snake");
-
-    /* icone da janela/barra de tarefas (opcional): precisa de um icon.png
-       na mesma pasta do executavel, formato quadrado (ex.: 64x64). */
     Image icone = LoadImage("icon.png");
     if (icone.data != NULL) {
         SetWindowIcon(icone);
         UnloadImage(icone);
     }
 
-    /* texturas opcionais dos elementos do jogo (mesma pasta do executavel).
-       Se um arquivo nao existir, LoadTexture retorna uma textura vazia
-       (id == 0) e o jogo desenha um retangulo colorido no lugar. */
     texturaObstaculo = LoadTexture("obstaculo.png");
     texturaComida    = LoadTexture("comida.png");
     texturaFrutaRuim = LoadTexture("fruta_ruim.png");
@@ -154,20 +128,15 @@ int main(void) {
     return 0;
 }
 
-/* ===================================================================
-   InitGame: chamada uma unica vez, ao ligar o jogo.
-   Carrega o recorde do arquivo e deixa tudo pronto no MENU, esperando
-   o jogador escolher a dificuldade.
-   =================================================================== */
+
 void InitGame(Jogo *jogo) {
-    AplicarConfiguracao(MEDIO);   /* configuracao padrao ate o jogador escolher */
+    AplicarConfiguracao(MEDIO);   
     jogo->recorde = CarregarRecorde();
     ConfigurarNovaPartida(jogo);
     jogo->estado = MENU;
 }
 
-/* Aplica os parametros (tamanho de celula, obstaculos, velocidade...)
-   do nivel escolhido as variaveis globais de configuracao. */
+
 static void AplicarConfiguracao(Dificuldade d) {
     const ConfigDificuldade *cfg = &CONFIGS_DIFICULDADE[d];
     g_dificuldade        = d;
@@ -179,9 +148,7 @@ static void AplicarConfiguracao(Dificuldade d) {
     g_maxFrutasRuins      = cfg->maxFrutasRuins;
 }
 
-/* Reposiciona a cobra, zera pontuacao/timers e gera obstaculos/comida
-   de acordo com a configuracao atual (g_colunas, g_linhas, etc.). Usada
-   tanto no boot do jogo quanto toda vez que uma dificuldade e escolhida. */
+
 static void ConfigurarNovaPartida(Jogo *jogo) {
     int centroX = g_colunas / 2;
     int centroY = g_linhas / 2;
@@ -208,9 +175,7 @@ static void ConfigurarNovaPartida(Jogo *jogo) {
     GerarComida(jogo);
 }
 
-/* ===================================================================
-   UpdateGame: entrada, movimento, colisoes, transicoes de estado
-   =================================================================== */
+
 void UpdateGame(Jogo *jogo) {
 
     if (jogo->estado == MENU) {
@@ -232,21 +197,20 @@ void UpdateGame(Jogo *jogo) {
 
     if (jogo->estado == GAME_OVER || jogo->estado == VITORIA) {
         if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
-            jogo->estado = MENU; /* volta ao menu para escolher a dificuldade de novo */
+            jogo->estado = MENU; 
         }
         return;
     }
 
-    /* ---- estado JOGANDO ---- */
 
     if (IsKeyPressed(KEY_P)) {
         jogo->pausado = !jogo->pausado;
     }
     if (jogo->pausado) {
-        return; /* congela tudo: nenhum timer ou movimento avanca */
+        return; 
     }
 
-    /* leitura de direcao (impede inversao de 180 graus) */
+    
     if ((IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) && jogo->cobra.direcao != BAIXO)
         jogo->cobra.direcao = CIMA;
     else if ((IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) && jogo->cobra.direcao != CIMA)
@@ -256,24 +220,23 @@ void UpdateGame(Jogo *jogo) {
     else if ((IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) && jogo->cobra.direcao != ESQUERDA)
         jogo->cobra.direcao = DIREITA;
 
-    /* comida boa some sozinha depois de um tempo e reaparece em outro lugar */
+   
     jogo->cronComida += GetFrameTime();
     if (jogo->cronComida >= DURACAO_COMIDA) {
         GerarComida(jogo);
         jogo->cronComida = 0.0f;
     }
 
-    /* ciclo das frutas marrons: roda a cada frame, independente do passo da cobra */
+   
     jogo->cronSpawnFrutaRuim += GetFrameTime();
     if (jogo->cronSpawnFrutaRuim >= INTERVALO_FRUTA_RUIM) {
         jogo->cronSpawnFrutaRuim = 0.0f;
-        /* tenta ocupar um slot livre, respeitando o limite do nivel atual */
         for (int i = 0; i < g_maxFrutasRuins; i++) {
             if (!jogo->frutasRuins[i].ativa) {
                 GerarFrutaRuim(jogo, i);
                 jogo->frutasRuins[i].ativa = true;
                 jogo->frutasRuins[i].tempoAtiva = 0.0f;
-                break; /* gera uma por vez, mesmo que haja mais de um slot livre */
+                break; 
             }
         }
     }
@@ -281,15 +244,14 @@ void UpdateGame(Jogo *jogo) {
         if (jogo->frutasRuins[i].ativa) {
             jogo->frutasRuins[i].tempoAtiva += GetFrameTime();
             if (jogo->frutasRuins[i].tempoAtiva >= DURACAO_FRUTA_RUIM) {
-                jogo->frutasRuins[i].ativa = false; /* tempo esgotou: some sem efeito */
+                jogo->frutasRuins[i].ativa = false; 
             }
         }
     }
 
-    /* movimento em grid, controlado por tempo (nao por frame) */
     jogo->tempoAcumulado += GetFrameTime();
     if (jogo->tempoAcumulado < g_intervaloMovimento) {
-        return; /* ainda nao e hora de mover */
+        return; 
     }
     jogo->tempoAcumulado = 0.0f;
 
@@ -303,7 +265,6 @@ void UpdateGame(Jogo *jogo) {
         case DIREITA:   novaCabeca.x += 1; break;
     }
 
-    /* colisao com parede ou com obstaculo = game over */
     if (ColisaoComParede(novaCabeca) || ColisaoComObstaculo(jogo, novaCabeca)) {
         jogo->estado = GAME_OVER;
         SalvarPontuacao(jogo->pontuacao, jogo->recorde);
@@ -324,7 +285,6 @@ void UpdateGame(Jogo *jogo) {
     }
     bool comeuFrutaRuim = (indiceFrutaRuimComida != -1);
 
-    /* desloca o corpo: cada segmento assume a posicao do anterior */
     int limite = comeu ? cobra->tamanho : cobra->tamanho - 1;
     for (int i = limite; i > 0; i--) {
         cobra->corpo[i] = cobra->corpo[i - 1];
@@ -357,7 +317,6 @@ void UpdateGame(Jogo *jogo) {
         }
     }
 
-    /* colisao com o proprio corpo (checa depois de mover a cabeca) */
     if (ColisaoComCorpo(cobra)) {
         jogo->estado = GAME_OVER;
         SalvarPontuacao(jogo->pontuacao, jogo->recorde);
@@ -365,9 +324,7 @@ void UpdateGame(Jogo *jogo) {
     }
 }
 
-/* ===================================================================
-   DrawGame: apenas desenha, nunca altera logica
-   =================================================================== */
+
 void DrawGame(Jogo *jogo) {
     BeginDrawing();
     ClearBackground((Color){ 20, 20, 25, 255 });
@@ -403,7 +360,6 @@ void DrawGame(Jogo *jogo) {
         return;
     }
 
-    /* grid de fundo (opcional, ajuda a visualizar as celulas) */
     for (int x = 0; x <= g_colunas; x++) {
         DrawLine(x * g_tamanhoCelula, 0, x * g_tamanhoCelula, ALTURA_TELA, (Color){40,40,45,255});
     }
@@ -411,22 +367,18 @@ void DrawGame(Jogo *jogo) {
         DrawLine(0, y * g_tamanhoCelula, LARGURA_TELA, y * g_tamanhoCelula, (Color){40,40,45,255});
     }
 
-    /* obstaculos */
     for (int i = 0; i < jogo->numObstaculos; i++) {
         DesenharEntidade(texturaObstaculo, jogo->obstaculos[i], (Color){90, 90, 100, 255});
     }
 
-    /* comida */
     DesenharEntidade(texturaComida, jogo->comida, RED);
 
-    /* frutas marrons (perigosas: encolhem a cobra) */
     for (int i = 0; i < MAX_FRUTAS_RUINS_CAP; i++) {
         if (jogo->frutasRuins[i].ativa) {
             DesenharEntidade(texturaFrutaRuim, jogo->frutasRuins[i].pos, (Color){101, 67, 33, 255});
         }
     }
 
-    /* cobra */
     for (int i = 0; i < jogo->cobra.tamanho; i++) {
         Color cor = (i == 0) ? DARKGREEN : GREEN;
         DrawRectangle(jogo->cobra.corpo[i].x * g_tamanhoCelula,
@@ -434,7 +386,6 @@ void DrawGame(Jogo *jogo) {
                        g_tamanhoCelula, g_tamanhoCelula, cor);
     }
 
-    /* placar */
     char placarTxt[96];
     snprintf(placarTxt, sizeof(placarTxt), "Pontuacao: %d   Recorde: %d   Nivel: %s",
               jogo->pontuacao, jogo->recorde, CONFIGS_DIFICULDADE[g_dificuldade].nome);
@@ -464,14 +415,7 @@ void DrawGame(Jogo *jogo) {
     EndDrawing();
 }
 
-/* ===================================================================
-   Funcoes auxiliares
-   =================================================================== */
 
-/* Desenha uma "celula" do jogo (obstaculo, comida ou fruta ruim).
-   Se a textura foi carregada (id > 0), desenha o PNG escalado para o
-   tamanho da celula. Caso contrario, desenha um retangulo com a cor
-   de reserva (fallback), para o jogo continuar funcionando sem imagens. */
 static void DesenharEntidade(Texture2D textura, Posicao pos, Color corFallback) {
     Rectangle destino = {
         (float)(pos.x * g_tamanhoCelula),
@@ -497,8 +441,7 @@ static bool PosicaoOcupadaPeloCorpo(const Cobra *cobra, Posicao pos) {
     return false;
 }
 
-/* Checa se uma posicao esta livre (sem cobra, obstaculo, comida ou fruta ruim),
-   para nao sortear duas coisas na mesma celula. */
+
 static bool PosicaoOcupada(const Jogo *jogo, Posicao pos, bool considerarComida, bool considerarFrutasRuins) {
     if (PosicaoOcupadaPeloCorpo(&jogo->cobra, pos)) return true;
 
@@ -520,8 +463,7 @@ static bool PosicaoOcupada(const Jogo *jogo, Posicao pos, bool considerarComida,
     return false;
 }
 
-/* Mantem uma "zona segura" ao redor do centro (onde a cobra nasce),
-   para o jogador nao morrer em obstaculo antes mesmo de conseguir se mover. */
+
 static bool DentroDaZonaSegura(Posicao pos) {
     int centroX = g_colunas / 2;
     int centroY = g_linhas / 2;
